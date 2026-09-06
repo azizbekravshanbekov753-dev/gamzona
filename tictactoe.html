@@ -1,10 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GameZone - Tic-Tac-Toe</title>
   <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -69,9 +70,9 @@
 </head>
 <body>
 <nav class="navbar">
-  <button class="back-btn" onclick="goHome()">← Orqaga</button>
-  <div class="nav-logo">⭕ Tic-Tac-Toe</div>
-  <div class="coin-display">🪙 <span id="nav-coins">0</span></div>
+  <button class="back-btn" onclick="goHome()">в†ђ Orqaga</button>
+  <div class="nav-logo">в­• Tic-Tac-Toe</div>
+  <div class="coin-display">рџЄ™ <span id="nav-coins">0</span></div>
 </nav>
 <div class="game-wrap">
   <h1 class="game-title">Tic-Tac-Toe</h1>
@@ -79,12 +80,12 @@
   <div class="players-bar">
     <div class="player-info" id="p1-info">
       <div class="p-avatar" id="p1-av">?</div>
-      <div><div class="p-name" id="p1-name">O'yinchi 1</div><div class="p-symbol">✕</div></div>
+      <div><div class="p-name" id="p1-name">O'yinchi 1</div><div class="p-symbol">вњ•</div></div>
     </div>
     <div class="vs-badge">VS</div>
     <div class="player-info right" id="p2-info">
       <div class="p-avatar" id="p2-av">?</div>
-      <div><div class="p-name" id="p2-name">O'yinchi 2</div><div class="p-symbol">○</div></div>
+      <div><div class="p-name" id="p2-name">O'yinchi 2</div><div class="p-symbol">в—‹</div></div>
     </div>
   </div>
   <div class="status-bar" id="status">Yuklanmoqda...</div>
@@ -94,8 +95,8 @@
     <div class="cell" onclick="makeMove(6)"></div><div class="cell" onclick="makeMove(7)"></div><div class="cell" onclick="makeMove(8)"></div>
   </div>
   <div class="controls">
-    <button class="ctrl-btn btn-play" onclick="resetGame()">🔄 Qayta</button>
-    <button class="ctrl-btn btn-back" onclick="goHome()">🏠 Uy</button>
+    <button class="ctrl-btn btn-play" onclick="resetGame()">рџ”„ Qayta</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">рџЏ  Uy</button>
   </div>
 </div>
 
@@ -105,22 +106,22 @@
     <div class="spinner"></div>
     <div class="wait-title">Raqib kutilmoqda...</div>
     <div class="wait-sub">Xona kodi:</div>
-    <div class="wait-code" id="wait-code">—</div>
+    <div class="wait-code" id="wait-code">вЂ”</div>
     <div class="wait-sub">Raqibingizga shu kodni yuboring</div>
-    <button class="cancel-btn" onclick="goHome()">✕ Bekor</button>
+    <button class="cancel-btn" onclick="goHome()">вњ• Bekor</button>
   </div>
 </div>
 
 <!-- Result -->
 <div class="result-overlay" id="result-overlay">
   <div class="result-box">
-    <span class="res-emoji" id="res-emoji">🏆</span>
+    <span class="res-emoji" id="res-emoji">рџЏ†</span>
     <div class="res-title" id="res-title"></div>
     <div class="res-sub"   id="res-sub"></div>
     <div class="res-coins" id="res-coins"></div>
     <div class="res-btns">
-      <button class="res-btn res-play" onclick="resetGame()">🔄 Qayta</button>
-      <button class="res-btn res-home" onclick="goHome()">🏠 Uy</button>
+      <button class="res-btn res-play" onclick="resetGame()">рџ”„ Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">рџЏ  Uy</button>
     </div>
   </div>
 </div>
@@ -139,7 +140,7 @@ const amIP1    = myKey === p1Key;
 
 const usersObj = getUsers();
 const p1User   = usersObj[p1Key] || { username: p1Key || 'O\'yinchi 1', skinColor: '#6366f1' };
-const p2User   = isSolo ? { username: 'CPU 🤖', skinColor: '#f43f5e' }
+const p2User   = isSolo ? { username: 'CPU рџ¤–', skinColor: '#f43f5e' }
                         : (usersObj[p2Key] || { username: p2Key, skinColor: '#f43f5e' });
 
 let board = Array(9).fill('');
@@ -195,12 +196,12 @@ function makeMove(idx) {
   if (gameOver || board[idx]) return;
   if (!isSolo) {
     const myTurn = amIP1 ? 'X' : 'O';
-    if (currentTurn !== myTurn) { showToast('⏳ Raqib navbati!', 'error'); return; }
+    if (currentTurn !== myTurn) { showToast('вЏі Raqib navbati!', 'error'); return; }
   }
 
   board[idx] = currentTurn;
   const cell = document.querySelectorAll('.cell')[idx];
-  cell.textContent = currentTurn === 'X' ? '✕' : '○';
+  cell.textContent = currentTurn === 'X' ? 'вњ•' : 'в—‹';
   cell.classList.add(currentTurn.toLowerCase(), 'taken');
 
   const winner = checkWinner();
@@ -252,7 +253,7 @@ function renderBoard() {
     cell.textContent = '';
     cell.className = 'cell';
     if (board[i]) {
-      cell.textContent = board[i]==='X' ? '✕' : '○';
+      cell.textContent = board[i]==='X' ? 'вњ•' : 'в—‹';
       cell.classList.add(board[i].toLowerCase(), 'taken');
     }
   });
@@ -265,7 +266,7 @@ function highlightActive() {
 function updateStatus() {
   if (gameOver) return;
   const name = currentTurn==='X' ? p1User.username : p2User.username;
-  document.getElementById('status').textContent = `${name} navbati (${currentTurn==='X'?'✕':'○'})`;
+  document.getElementById('status').textContent = `${name} navbati (${currentTurn==='X'?'вњ•':'в—‹'})`;
 }
 
 function endGame(result) {
@@ -275,16 +276,16 @@ function endGame(result) {
 
   let emoji, title, sub, coinsText = '';
   if (result === 'draw') {
-    emoji='🤝'; title='Durang!'; sub='Ikki o\'yinchi teng!';
+    emoji='рџ¤ќ'; title='Durang!'; sub='Ikki o\'yinchi teng!';
   } else {
     const iWon = (result==='X'&&amIP1)||(result==='O'&&!amIP1)||(isSolo&&result==='X');
     if (iWon) {
-      emoji='🏆'; title='G\'OLIBSIZ!'; sub=`Tabriklaymiz!`;
-      coinsText=`+🪙 ${reward} tanga!`;
+      emoji='рџЏ†'; title='G\'OLIBSIZ!'; sub=`Tabriklaymiz!`;
+      coinsText=`+рџЄ™ ${reward} tanga!`;
       addCoins(reward); addResult(true);
       document.getElementById('nav-coins').textContent = getCurrentUser()?.coins||0;
     } else {
-      emoji='😢'; title='Yutqazdingiz'; sub='Keyingi safar omad!';
+      emoji='рџў'; title='Yutqazdingiz'; sub='Keyingi safar omad!';
       addResult(false);
     }
   }
@@ -317,3 +318,4 @@ function goHome() {
 </script>
 </body>
 </html>
+

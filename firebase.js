@@ -1,25 +1,10 @@
 // ═══════════════════════════════════════════════
-//  ABLY CONFIG
+//  MULTIPLAYER — PeerJS (Browser-to-Browser)
+//  GitHub Pages da to'liq ishlaydi!
 // ═══════════════════════════════════════════════
-const ABLY_KEY = 'KGookQ.FfjOlQ:ueKRpQKBtSsd0m76BPIX3aRBHSNFW8YaLMlmeN2whSs';
-
-let _ably = null;
-
-function getAbly() {
-  if (_ably) return _ably;
-  if (typeof Ably === 'undefined') { console.error('Ably yuklanmagan'); return null; }
-  const cid = getCurrentKey() || ('g' + Date.now());
-  _ably = new Ably.Realtime({ key: ABLY_KEY, clientId: cid });
-  return _ably;
-}
-
-function getCh(name) {
-  const a = getAbly();
-  return a ? a.channels.get(name) : null;
-}
 
 // ═══════════════════════════════════════════════
-//  USER
+//  USER — localStorage
 // ═══════════════════════════════════════════════
 function getUsers()   { return JSON.parse(localStorage.getItem('gz_users') || '{}'); }
 function saveUsers(u) { localStorage.setItem('gz_users', JSON.stringify(u)); }
@@ -27,164 +12,166 @@ function getCurrentKey()  { return localStorage.getItem('gz_current_user'); }
 function getCurrentUser() { const k = getCurrentKey(); return k ? getUsers()[k] : null; }
 
 // ═══════════════════════════════════════════════
-//  ROOM — Oddiy publish/subscribe
+//  ROOM SYSTEM — PeerJS asosida
 //
-//  Kanal: gz-room-{gameType}-{code}
-//
-//  1. Har ikki o'yinchi kanalga subscribe bo'ladi
-//  2. Har biri "ping" yuboradi (men shu erdaman)
-//  3. Boshqasining "ping" ini ko'rsa — "pong" qaytaradi
-//  4. Kim "pong" olsa — ikkalasi ham ready
+//  Qanday ishlaydi:
+//  1. Har ikki o'yinchi "gz-{game}-{code}" ID bilan Peer yaratadi
+//  2. Birinchi kirgan = HOST (ID = gz-{game}-{code}-host)
+//  3. Ikkinchi kirgan = GUEST, hostga ulanadi
+//  4. Ular P2P orqali o'ynaydi
 // ═══════════════════════════════════════════════
+
+let _peer = null;
+let _conn = null;
+let _stateCallback = null;
+
+function makePeerId(gameType, code, role) {
+  // Faqat harf va raqamdan iborat bo'lishi kerak
+  const clean = (gameType + code).replace(/[^a-zA-Z0-9]/g, '');
+  return `gz${clean}${role}`;
+}
+
 function enterRoom(gameType, code, myKey, onReady) {
-  const ch = getCh(`gz-room-${gameType}-${code}`);
-  if (!ch) { setTimeout(() => onReady(null, null), 100); return () => {}; }
+  const hostId  = makePeerId(gameType, code, 'h');
+  const guestId = makePeerId(gameType, code, 'g') + Date.now().toString().slice(-4);
 
   let settled = false;
-  let pingInterval = null;
-  let timeoutId = null;
+  let timeoutId;
+  let tryGuestInterval;
 
   function finish(p1, p2) {
     if (settled) return;
     settled = true;
-    clearInterval(pingInterval);
     clearTimeout(timeoutId);
+    clearInterval(tryGuestInterval);
     onReady(p1, p2);
   }
 
-  // "ping" kelsa — biz ham bordligimizni aytamiz va o'yinni boshlaymiz
-  ch.subscribe('ping', (msg) => {
-    if (msg.data.from === myKey) return; // o'zim
-    const otherKey = msg.data.from;
-    // "pong" yuborish
-    ch.publish('pong', { from: myKey, to: otherKey });
-    // O'yin boshlash: ikkalasi sorted order da
-    const keys = [myKey, otherKey].sort();
-    finish(keys[0], keys[1]);
+  // Birinchi host sifatida urinib ko'r
+  const hostPeer = new Peer(hostId, { debug: 0 });
+
+  hostPeer.on('open', () => {
+    // Host bo'ldik — guest kutamiz
+    _peer = hostPeer;
+
+    hostPeer.on('connection', (conn) => {
+      _conn = conn;
+      conn.on('open', () => {
+        conn.send({ type: 'ready', p1: myKey, p2: conn.metadata });
+        finish(myKey, conn.metadata);
+      });
+      conn.on('data', (data) => {
+        if (_stateCallback) _stateCallback(data);
+      });
+    });
   });
 
-  // "pong" kelsa — biz ping yuborganmiz, u javob berdi
-  ch.subscribe('pong', (msg) => {
-    if (msg.data.to !== myKey) return;
-    const otherKey = msg.data.from;
-    const keys = [myKey, otherKey].sort();
-    finish(keys[0], keys[1]);
+  hostPeer.on('error', (err) => {
+    // Host ID band — guest sifatida ulanamiz
+    hostPeer.destroy();
+
+    const guestPeer = new Peer(guestId, { debug: 0 });
+    _peer = guestPeer;
+
+    guestPeer.on('open', () => {
+      function tryConnect() {
+        if (settled) return;
+        const conn = guestPeer.connect(hostId, { metadata: myKey, reliable: true });
+        conn.on('open', () => {
+          _conn = conn;
+          conn.on('data', (data) => {
+            if (data.type === 'ready') {
+              finish(data.p1, data.p2);
+            } else if (_stateCallback) {
+              _stateCallback(data);
+            }
+          });
+        });
+        conn.on('error', () => {});
+      }
+
+      tryConnect();
+      tryGuestInterval = setInterval(tryConnect, 2000);
+    });
+
+    guestPeer.on('error', () => {});
   });
 
-  // Har 1 sekundda ping yuboramiz (raqib subscribe bo'lguncha)
-  function sendPing() {
-    if (settled) return;
-    ch.publish('ping', { from: myKey, ts: Date.now() });
-  }
-
-  // Birinchi ping — 500ms kutib
-  setTimeout(sendPing, 500);
-  // Keyin har 1.5 sekundda
-  pingInterval = setInterval(sendPing, 1500);
-
-  // 2 daqiqa timeout
-  timeoutId = setTimeout(() => {
-    finish(null, null);
-  }, 120000);
+  timeoutId = setTimeout(() => finish(null, null), 120000);
 
   return () => {
     settled = true;
-    clearInterval(pingInterval);
     clearTimeout(timeoutId);
-    try { ch.unsubscribe(); } catch(e) {}
+    clearInterval(tryGuestInterval);
+    try { if (_conn) _conn.close(); } catch(e) {}
+    try { if (_peer) _peer.destroy(); } catch(e) {}
+    _peer = null; _conn = null;
   };
 }
 
 // ═══════════════════════════════════════════════
-//  GAME STATE
+//  GAME STATE — P2P yuborish
 // ═══════════════════════════════════════════════
 function sendState(gameType, code, stateObj) {
-  const ch = getCh(`gz-room-${gameType}-${code}`);
-  if (ch) ch.publish('state', { ...stateObj, _from: getCurrentKey() });
+  if (_conn && _conn.open) {
+    try { _conn.send({ ...stateObj, _type: 'state' }); } catch(e) {}
+  }
 }
 
 function listenState(gameType, code, callback) {
-  const myKey = getCurrentKey();
-  const ch = getCh(`gz-room-${gameType}-${code}`);
-  if (!ch) return () => {};
-  ch.subscribe('state', (msg) => {
-    if (msg.data._from === myKey) return;
-    callback(msg.data);
-  });
-  return () => { try { ch.unsubscribe('state'); } catch(e) {} };
+  _stateCallback = (data) => {
+    if (data && data._type === 'state') callback(data);
+  };
+  return () => { _stateCallback = null; };
 }
 
 function sendGameOver(gameType, code, winner) {
-  const ch = getCh(`gz-room-${gameType}-${code}`);
-  if (ch) ch.publish('over', { winner });
+  if (_conn && _conn.open) {
+    try { _conn.send({ _type: 'over', winner }); } catch(e) {}
+  }
 }
 
 // ═══════════════════════════════════════════════
 //  QUEUE — Tasodifiy raqib
+//  Shared room code ishlatamiz
 // ═══════════════════════════════════════════════
 function findRandom(gameType, myKey, onMatch) {
-  const ch = getCh(`gz-queue-${gameType}`);
-  if (!ch) { onMatch(null, null, null); return () => {}; }
-
+  // Tasodifiy kod o'rniga — umumiy "random" xonasiga ulanamiz
+  const code = 'rand0m';
   let settled = false;
-  let pingInt = null;
-  let timeoutId = null;
 
-  function finish(p1, p2, code) {
+  const cancel = enterRoom(gameType, code, myKey, (p1, p2) => {
     if (settled) return;
     settled = true;
-    clearInterval(pingInt);
-    clearTimeout(timeoutId);
-    try { ch.unsubscribe(); } catch(e) {}
+    if (!p1) { onMatch(null, null, null); return; }
     onMatch(p1, p2, code);
-  }
-
-  ch.subscribe('ping', (msg) => {
-    if (msg.data.from === myKey) return;
-    const other = msg.data.from;
-    ch.publish('pong', { from: myKey, to: other });
-    const keys = [myKey, other].sort();
-    const code = 'R' + keys.join('').slice(0,6);
-    finish(keys[0], keys[1], code);
   });
 
-  ch.subscribe('pong', (msg) => {
-    if (msg.data.to !== myKey) return;
-    const other = msg.data.from;
-    const keys = [myKey, other].sort();
-    const code = 'R' + keys.join('').slice(0,6);
-    finish(keys[0], keys[1], code);
-  });
-
-  const sendPing = () => { if (!settled) ch.publish('ping', { from: myKey, ts: Date.now() }); };
-  setTimeout(sendPing, 500);
-  pingInt = setInterval(sendPing, 1500);
-
-  timeoutId = setTimeout(() => finish(null, null, null), 60000);
-
-  return () => {
-    settled = true;
-    clearInterval(pingInt);
-    clearTimeout(timeoutId);
-    try { ch.unsubscribe(); } catch(e) {}
-  };
+  return () => { settled = true; cancel(); };
 }
 
 // ═══════════════════════════════════════════════
-//  INVITE
+//  INVITE — Do'st chaqirish (Ably orqali xabar)
 // ═══════════════════════════════════════════════
 function sendInvite(toKey, fromKey, gameType, code) {
-  const ch = getCh(`gz-invite-${toKey}`);
-  if (ch) ch.publish('invite', { from: fromKey, gameType, code, ts: Date.now() });
+  // localStorage orqali invite (bir xil qurilmada) + Ably
+  const invKey = `gz_inv_${toKey}`;
+  const invites = JSON.parse(localStorage.getItem(invKey) || '[]');
+  invites.push({ from: fromKey, gameType, code, ts: Date.now() });
+  localStorage.setItem(invKey, JSON.stringify(invites));
 }
 
 function listenInvites(myKey, callback) {
-  const ch = getCh(`gz-invite-${myKey}`);
-  if (!ch) return () => {};
-  ch.subscribe('invite', (msg) => {
-    if (Date.now() - (msg.data.ts || 0) < 120000) callback(msg.data);
-  });
-  return () => { try { ch.unsubscribe(); } catch(e) {} };
+  const invKey = `gz_inv_${myKey}`;
+  const check = setInterval(() => {
+    const invites = JSON.parse(localStorage.getItem(invKey) || '[]');
+    const fresh = invites.filter(i => Date.now() - i.ts < 120000);
+    if (fresh.length > 0) {
+      localStorage.removeItem(invKey);
+      fresh.forEach(callback);
+    }
+  }, 1000);
+  return () => clearInterval(check);
 }
 
 // ═══════════════════════════════════════════════
@@ -234,5 +221,5 @@ function showToast(msg, type = 'success') {
   t.style.borderColor = type==='error'?'rgba(239,68,68,.6)':'rgba(99,102,241,.6)';
   t.style.opacity='1'; t.style.display='block';
   clearTimeout(t._t);
-  t._t = setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.style.display='none',300); }, 3500);
+  t._t = setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.style.display='none',300); },3500);
 }

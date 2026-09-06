@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8"/>
@@ -6,6 +6,7 @@
   <title>GameZone - Connect Four</title>
   <!-- Ably SDK -->
   <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -86,9 +87,9 @@
 </head>
 <body>
 <nav class="navbar">
-  <button class="back-btn" onclick="goHome()">← Orqaga</button>
-  <div class="nav-logo">🔴 Connect Four</div>
-  <div class="coin-display">🪙 <span id="nav-coins">0</span></div>
+  <button class="back-btn" onclick="goHome()">в†ђ Orqaga</button>
+  <div class="nav-logo">рџ”ґ Connect Four</div>
+  <div class="coin-display">рџЄ™ <span id="nav-coins">0</span></div>
 </nav>
 
 <div class="game-wrap">
@@ -115,8 +116,8 @@
   </div>
 
   <div class="controls">
-    <button class="ctrl-btn btn-play" onclick="resetGame()">🔄 Qayta O'yna</button>
-    <button class="ctrl-btn btn-back" onclick="goHome()">🏠 Bosh Sahifa</button>
+    <button class="ctrl-btn btn-play" onclick="resetGame()">рџ”„ Qayta O'yna</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">рџЏ  Bosh Sahifa</button>
   </div>
 </div>
 
@@ -125,21 +126,21 @@
     <div class="spinner"></div>
     <div class="wait-title">Raqib kutilmoqda...</div>
     <div class="wait-sub">Xona kodi:</div>
-    <div class="wait-code" id="wait-code">—</div>
+    <div class="wait-code" id="wait-code">вЂ”</div>
     <div class="wait-sub">Raqibingizga shu kodni yuboring</div>
-    <button class="cancel-btn" onclick="goHome()">✕ Bekor qilish</button>
+    <button class="cancel-btn" onclick="goHome()">вњ• Bekor qilish</button>
   </div>
 </div>
 
 <div class="result-overlay" id="result-overlay">
   <div class="result-box">
-    <span class="result-emoji" id="res-emoji">🏆</span>
+    <span class="result-emoji" id="res-emoji">рџЏ†</span>
     <div class="result-title" id="res-title"></div>
     <div class="result-sub"   id="res-sub"></div>
     <div class="result-coins" id="res-coins"></div>
     <div class="result-btns">
-      <button class="res-btn res-play" onclick="resetGame()">🔄 Qayta</button>
-      <button class="res-btn res-home" onclick="goHome()">🏠 Uy</button>
+      <button class="res-btn res-play" onclick="resetGame()">рџ”„ Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">рџЏ  Uy</button>
     </div>
   </div>
 </div>
@@ -160,7 +161,7 @@ const amIP1    = myKey === p1Key;
 const usersObj = getUsers();
 const p1User   = usersObj[p1Key] || { username: p1Key || 'O\'yinchi 1', skinColor: '#ef4444' };
 const p2User   = isSolo
-  ? { username: 'CPU 🤖', skinColor: '#0ea5e9' }
+  ? { username: 'CPU рџ¤–', skinColor: '#0ea5e9' }
   : (usersObj[p2Key] || { username: p2Key, skinColor: '#0ea5e9' });
 
 let grid, currentPlayer, gameOver, _roomUnsub;
@@ -187,7 +188,7 @@ function buildBoard() {
   btnWrap.innerHTML = '';
   for (let c = 0; c < COLS; c++) {
     const b = document.createElement('button');
-    b.className = 'col-btn'; b.id = `cb-${c}`; b.textContent = '▼';
+    b.className = 'col-btn'; b.id = `cb-${c}`; b.textContent = 'в–ј';
     b.onclick = () => dropPiece(c);
     btnWrap.appendChild(b);
   }
@@ -215,12 +216,12 @@ async function initMultiplayer() {
     document.getElementById('wait-code').textContent = roomCode;
     _roomUnsub = hostRoom('connect4', roomCode, myKey, () => {
       document.getElementById('wait-overlay').style.display = 'none';
-      showToast('🎮 Raqib ulandi!');
+      showToast('рџЋ® Raqib ulandi!');
     });
   } else {
     document.getElementById('wait-overlay').style.display = 'none';
     _roomUnsub = guestJoinRoom('connect4', roomCode, myKey, () => {
-      showToast('🎮 O\'yin boshlandi!');
+      showToast('рџЋ® O\'yin boshlandi!');
     });
   }
 
@@ -259,7 +260,7 @@ function dropPiece(col) {
   if (gameOver) return;
   if (!isSolo) {
     const myTurn = amIP1 ? 1 : 2;
-    if (currentPlayer !== myTurn) { showToast('⏳ Raqib navbati!', 'error'); return; }
+    if (currentPlayer !== myTurn) { showToast('вЏі Raqib navbati!', 'error'); return; }
   }
   const row = getEmptyRow(col);
   if (row === -1) return;
@@ -372,21 +373,21 @@ function endGame(winner, winCells) {
 
   let emoji, title, sub, coinsText = '';
   if (!winner) {
-    emoji='🤝'; title='Durang!'; sub='Taxtada joy qolmadi!';
+    emoji='рџ¤ќ'; title='Durang!'; sub='Taxtada joy qolmadi!';
     if (!isSolo) finishRoom('connect4', roomCode, 'draw');
   } else {
     const iWon = (winner===1&&amIP1)||(winner===2&&!amIP1)||(isSolo&&winner===1);
     const winName = winner===1 ? p1User.username : p2User.username;
     if (iWon) {
-      emoji='🏆'; title='G\'OLIBSIZ!'; sub=`Tabriklaymiz, ${winName}!`;
-      coinsText=`+🪙 ${reward} tanga!`;
+      emoji='рџЏ†'; title='G\'OLIBSIZ!'; sub=`Tabriklaymiz, ${winName}!`;
+      coinsText=`+рџЄ™ ${reward} tanga!`;
       addCoins(reward); addResult(true);
       document.getElementById('nav-coins').textContent = getCurrentUser()?.coins||0;
       if (!isSolo) finishRoom('connect4', roomCode, winner===1 ? p1Key : p2Key);
     } else if (isSolo&&winner===2) {
-      emoji='😢'; title='Yutqazdingiz'; sub='CPU yutdi!'; addResult(false);
+      emoji='рџў'; title='Yutqazdingiz'; sub='CPU yutdi!'; addResult(false);
     } else {
-      emoji='😢'; title='Yutqazdingiz'; sub=`${winName} yutdi!`; addResult(false);
+      emoji='рџў'; title='Yutqazdingiz'; sub=`${winName} yutdi!`; addResult(false);
       if (!isSolo) finishRoom('connect4', roomCode, winner===1 ? p1Key : p2Key);
     }
   }
@@ -404,3 +405,4 @@ function goHome() { if(_roomUnsub)_roomUnsub(); window.location.href='dashboard.
 </script>
 </body>
 </html>
+
