@@ -8,16 +8,18 @@ let _ably = null;
 function getAbly() {
   if (_ably) return _ably;
   if (typeof Ably === 'undefined') { console.error('Ably SDK yuklanmagan'); return null; }
-  const clientId = getCurrentKey() || ('guest_' + Math.random().toString(36).slice(2));
-  _ably = new Ably.Realtime({ key: ABLY_KEY, clientId });
+  const clientId = getCurrentKey() || ('guest_' + Math.random().toString(36).slice(2, 8));
+  _ably = new Ably.Realtime({
+    key: ABLY_KEY,
+    clientId,
+    echoMessages: false   // o'ziga qaytmaslik
+  });
   return _ably;
 }
 
-// Channel olish
 function getCh(name) {
   const a = getAbly();
-  if (!a) return null;
-  return a.channels.get(name);
+  return a ? a.channels.get(name) : null;
 }
 
 // ═══════════════════════════════════════════════
@@ -32,138 +34,157 @@ function getCurrentUser() {
 }
 
 // ═══════════════════════════════════════════════
-//  ROOM PROTOCOL
+//  ROOM — Presence asosida (ishonchli!)
 //
-//  Kanal: gz-{gameType}-{roomCode}
-//
-//  Xabarllar:
-//   "join"    → { from: playerKey }   (Guest yuboradi)
-//   "ready"   → { p1, p2, code }      (Birinchi kirgan yuboradi)
-//   "state"   → { ...gameState }      (Har harakat da)
-//   "over"    → { winner }
+//  Qanday ishlaydi:
+//  1. Ikki o'yinchi bir xil kanal nomiga kiradi
+//  2. Presence orqali kim bor ekanini ko'radi
+//  3. Agar 2 kishi bo'lsa — o'yin boshlanadi
+//  4. Kanal nomi: gz-{gameType}-{code}
 // ═══════════════════════════════════════════════
 
-function roomChannel(gameType, code) {
-  return getCh(`gz-${gameType}-${code}`);
-}
-
-// Xonaga kirish — ikkala o'yinchi bir xil kodni kiritadi
-// Kim birinchi kirsa = p1, ikkinchisi = p2
 function enterRoom(gameType, code, myKey, onReady) {
-  const ch = roomChannel(gameType, code);
-  if (!ch) return () => {};
+  const chName = `gz-${gameType}-${code}`;
+  const ch = getCh(chName);
+  if (!ch) { onReady(null, null); return () => {}; }
 
   let settled = false;
+  let timeoutId;
 
-  // "ready" xabari kelsa — o'yin boshlanadi
-  ch.subscribe('ready', (msg) => {
+  function tryMatch(members) {
     if (settled) return;
-    settled = true;
-    onReady(msg.data.p1, msg.data.p2);
+    // clientId lar ro'yxati
+    const keys = members.map(m => m.clientId).filter(Boolean);
+    const unique = [...new Set(keys)];
+    if (unique.length >= 2) {
+      settled = true;
+      clearTimeout(timeoutId);
+      // Tartib: alfavit bo'yicha - kichigi p1, kattasi p2
+      unique.sort();
+      const p1 = unique[0];
+      const p2 = unique[1];
+      onReady(p1, p2);
+    }
+  }
+
+  // Presence ga kirish
+  ch.presence.enter({ key: myKey, ts: Date.now() });
+
+  // Mavjud presence ni tekshir
+  ch.presence.get((err, members) => {
+    if (!err && members) tryMatch(members);
   });
 
-  // "join" xabari — boshqa odam kirdi, biz p1 miz
-  ch.subscribe('join', (msg) => {
-    if (settled) return;
-    if (msg.data.from === myKey) return;
-    settled = true;
-    // Biz p1, u p2
-    ch.publish('ready', { p1: myKey, p2: msg.data.from, code });
-    onReady(myKey, msg.data.from);
+  // Yangi odam kirsa
+  ch.presence.subscribe('enter', () => {
+    ch.presence.get((err, members) => {
+      if (!err && members) tryMatch(members);
+    });
   });
-
-  // Biz "join" xabari yuboramiz
-  ch.publish('join', { from: myKey });
 
   // 2 daqiqa timeout
-  const timeout = setTimeout(() => {
+  timeoutId = setTimeout(() => {
     if (!settled) {
       settled = true;
-      ch.unsubscribe();
-      onReady(null, null); // timeout signal
+      ch.presence.leave();
+      onReady(null, null);
     }
   }, 120000);
 
   return () => {
-    clearTimeout(timeout);
-    try { ch.unsubscribe(); } catch(e) {}
+    settled = true;
+    clearTimeout(timeoutId);
+    try { ch.presence.leave(); ch.presence.unsubscribe(); } catch(e) {}
   };
 }
 
 // O'yin holatini yuborish
 function sendState(gameType, code, stateObj) {
-  const ch = roomChannel(gameType, code);
-  if (ch) ch.publish('state', { ...stateObj, ts: Date.now() });
+  const ch = getCh(`gz-${gameType}-${code}`);
+  if (ch) ch.publish('state', { ...stateObj, _from: getCurrentKey(), ts: Date.now() });
 }
 
-// O'yin holatini tinglash
+// O'yin holatini tinglash (o'zimizdan kelganini skip qilish)
 function listenState(gameType, code, callback) {
-  const ch = roomChannel(gameType, code);
+  const ch = getCh(`gz-${gameType}-${code}`);
   if (!ch) return () => {};
-  ch.subscribe('state', (msg) => callback(msg.data));
-  return () => { try { ch.unsubscribe(); } catch(e) {} };
+  const myKey = getCurrentKey();
+  ch.subscribe('state', (msg) => {
+    if (msg.data._from === myKey) return; // o'zimiz yuborganini skip
+    callback(msg.data);
+  });
+  return () => { try { ch.unsubscribe('state'); } catch(e) {} };
 }
 
 // O'yin tugadi
 function sendGameOver(gameType, code, winner) {
-  const ch = roomChannel(gameType, code);
-  if (ch) ch.publish('over', { winner });
+  const ch = getCh(`gz-${gameType}-${code}`);
+  if (ch) ch.publish('over', { winner, _from: getCurrentKey() });
 }
 
 // ═══════════════════════════════════════════════
 //  QUEUE — Tasodifiy raqib
-//  Kanal: gz-queue-{gameType}
+//  Presence asosida: gz-queue-{gameType}
 // ═══════════════════════════════════════════════
+
 function findRandom(gameType, myKey, onMatch) {
   const ch = getCh(`gz-queue-${gameType}`);
-  if (!ch) return () => {};
+  if (!ch) { onMatch(null, null, null); return () => {}; }
 
   let settled = false;
+  let timeoutId;
 
-  // Birov "looking" desa — match qilamiz
-  ch.subscribe('looking', (msg) => {
+  function tryMatch(members) {
     if (settled) return;
-    if (msg.data.from === myKey) return;
+    const keys = members.map(m => m.clientId).filter(k => k && k !== myKey);
+    if (keys.length === 0) return;
+
     settled = true;
-    ch.unsubscribe();
-    // Random kod yasaymiz
-    const code = 'R' + Date.now();
-    // Match kanalida uchrashish
-    const mCh = getCh(`gz-match-${code}`);
-    mCh.publish('matched', { p1: msg.data.from, p2: myKey, code, game: gameType });
-    onMatch(msg.data.from, myKey, code);
+    clearTimeout(timeoutId);
+
+    const opponent = keys[0];
+    const allKeys = [myKey, opponent].sort();
+    const code = 'R' + allKeys.join('').slice(0, 8);
+
+    // Queue dan chiq
+    ch.presence.leave();
+    ch.presence.unsubscribe();
+
+    onMatch(allKeys[0], allKeys[1], code);
+  }
+
+  // Queue ga qo'shil
+  ch.presence.enter({ ts: Date.now() });
+
+  // Mavjud odamlarni ko'r
+  ch.presence.get((err, members) => {
+    if (!err && members) tryMatch(members.filter(m => m.clientId !== myKey));
   });
 
-  // Match kanalini ham tinglaylik (boshqa odam biz uchun match qilsa)
-  ch.subscribe('matched', (msg) => {
-    if (settled) return;
-    if (msg.data.p1 !== myKey && msg.data.p2 !== myKey) return;
-    settled = true;
-    ch.unsubscribe();
-    onMatch(msg.data.p1, msg.data.p2, msg.data.code);
+  // Yangi odam kirsa
+  ch.presence.subscribe('enter', () => {
+    ch.presence.get((err, members) => {
+      if (!err && members) tryMatch(members.filter(m => m.clientId !== myKey));
+    });
   });
 
-  // E'lon qilish
-  ch.publish('looking', { from: myKey, game: gameType, ts: Date.now() });
-
-  const timeout = setTimeout(() => {
+  timeoutId = setTimeout(() => {
     if (!settled) {
       settled = true;
-      try { ch.unsubscribe(); } catch(e) {}
-      onMatch(null, null, null); // topilmadi
+      try { ch.presence.leave(); ch.presence.unsubscribe(); } catch(e) {}
+      onMatch(null, null, null);
     }
   }, 60000);
 
   return () => {
     settled = true;
-    clearTimeout(timeout);
-    try { ch.unsubscribe(); } catch(e) {}
+    clearTimeout(timeoutId);
+    try { ch.presence.leave(); ch.presence.unsubscribe(); } catch(e) {}
   };
 }
 
 // ═══════════════════════════════════════════════
 //  INVITE — Do'st chaqirish
-//  Kanal: gz-invite-{toKey}
 // ═══════════════════════════════════════════════
 function sendInvite(toKey, fromKey, gameType, code) {
   const ch = getCh(`gz-invite-${toKey}`);
@@ -174,7 +195,7 @@ function listenInvites(myKey, callback) {
   const ch = getCh(`gz-invite-${myKey}`);
   if (!ch) return () => {};
   ch.subscribe('invite', (msg) => {
-    if (Date.now() - msg.data.ts < 120000) callback(msg.data);
+    if (Date.now() - (msg.data.ts || 0) < 120000) callback(msg.data);
   });
   return () => { try { ch.unsubscribe(); } catch(e) {} };
 }
@@ -239,5 +260,5 @@ function showToast(msg, type = 'success') {
   t.style.opacity = '1';
   t.style.display = 'block';
   clearTimeout(t._t);
-  t._t = setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.style.display = 'none', 300); }, 3000);
+  t._t = setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.style.display = 'none', 300); }, 3500);
 }
