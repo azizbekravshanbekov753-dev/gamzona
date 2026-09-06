@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8"/>
@@ -57,7 +57,7 @@
     .ans-btn.wrong{background:rgba(239,68,68,.2)!important;border-color:#ef4444!important;}
     .ans-btn.locked{cursor:default;}
     .ans-btn.opponent-answered{position:relative;}
-    .ans-btn.opponent-answered::after{content:'👤';position:absolute;top:-8px;right:-6px;font-size:14px;}
+    .ans-btn.opponent-answered::after{content:'рџ‘¤';position:absolute;top:-8px;right:-6px;font-size:14px;}
 
     .feedback{font-size:15px;font-weight:700;text-align:center;min-height:22px;margin-bottom:4px;}
     .opponent-status{font-size:13px;color:rgba(255,255,255,.4);text-align:center;min-height:20px;margin-bottom:8px;}
@@ -98,9 +98,9 @@
 </head>
 <body>
 <nav class="navbar">
-  <button class="back-btn" onclick="goHome()">← Orqaga</button>
-  <div class="nav-logo">🧠 Quiz Battle</div>
-  <div class="coin-display">🪙 <span id="nav-coins">0</span></div>
+  <button class="back-btn" onclick="goHome()">в†ђ Orqaga</button>
+  <div class="nav-logo">рџ§  Quiz Battle</div>
+  <div class="coin-display">рџЄ™ <span id="nav-coins">0</span></div>
 </nav>
 
 <div class="game-wrap">
@@ -124,7 +124,7 @@
   <div class="progress-wrap">
     <div class="progress-top">
       <span id="q-counter">Savol 1 / 10</span>
-      <span id="q-turn">Navbat: —</span>
+      <span id="q-turn">Navbat: вЂ”</span>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
   </div>
@@ -147,8 +147,8 @@
   <div class="opponent-status" id="opp-status"></div>
 
   <div class="controls">
-    <button class="ctrl-btn btn-play" onclick="restartGame()">🔄 Qayta O'yna</button>
-    <button class="ctrl-btn btn-back" onclick="goHome()">🏠 Bosh Sahifa</button>
+    <button class="ctrl-btn btn-play" onclick="restartGame()">рџ”„ Qayta O'yna</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">рџЏ  Bosh Sahifa</button>
   </div>
 </div>
 
@@ -157,15 +157,15 @@
     <div class="spinner"></div>
     <div class="wait-title">Raqib kutilmoqda...</div>
     <div class="wait-sub">Xona kodi:</div>
-    <div class="wait-code" id="wait-code">—</div>
+    <div class="wait-code" id="wait-code">вЂ”</div>
     <div class="wait-sub">Raqibingizga shu kodni yuboring</div>
-    <button class="cancel-btn" onclick="goHome()">✕ Bekor qilish</button>
+    <button class="cancel-btn" onclick="goHome()">вњ• Bekor qilish</button>
   </div>
 </div>
 
 <div class="result-overlay" id="result-overlay">
   <div class="result-box">
-    <span class="result-emoji" id="res-emoji">🏆</span>
+    <span class="result-emoji" id="res-emoji">рџЏ†</span>
     <div class="result-title" id="res-title"></div>
     <div class="result-scores">
       <div class="rs-card"><div class="rs-name" id="rs-n1"></div><div class="rs-score" id="rs-s1">0</div></div>
@@ -174,8 +174,8 @@
     <div class="result-sub"   id="res-sub"></div>
     <div class="result-coins" id="res-coins"></div>
     <div class="result-btns">
-      <button class="res-btn res-play" onclick="restartGame()">🔄 Qayta</button>
-      <button class="res-btn res-home" onclick="goHome()">🏠 Uy</button>
+      <button class="res-btn res-play" onclick="restartGame()">рџ”„ Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">рџЏ  Uy</button>
     </div>
   </div>
 </div>
@@ -183,61 +183,61 @@
 <script src="firebase.js"></script>
 <script src="coins.js"></script>
 <script>
-// ── QUESTIONS ──
+// в”Ђв”Ђ QUESTIONS в”Ђв”Ђ
 const QUESTIONS = [
-  {cat:'🌍 Geografiya',q:"O'zbekistonning poytaxti?",opts:["Samarqand","Toshkent","Buxoro","Namangan"],ans:1},
-  {cat:'🌍 Geografiya',q:"Dunyo bo'yicha eng baland tog'?",opts:["K2","Kangchenjunga","Everest","Lhotse"],ans:2},
-  {cat:'🌍 Geografiya',q:"Eng katta okean?",opts:["Atlantika","Hind","Tinch","Arktika"],ans:2},
-  {cat:'🌍 Geografiya',q:"Braziliyaning poytaxti?",opts:["Rio de Janeiro","San-Paulo","Braziliya","Salvador"],ans:2},
-  {cat:'🌍 Geografiya',q:"Dunyodagi eng katta davlat?",opts:["Kanada","Xitoy","AQSh","Rossiya"],ans:3},
-  {cat:'🌍 Geografiya',q:"Nil daryosi qaysi qit'ada?",opts:["Osiyo","Afrika","Amerika","Yevropa"],ans:1},
-  {cat:'🌍 Geografiya',q:"Yaponiyaning poytaxti?",opts:["Osaka","Kyoto","Tokyo","Hiroshima"],ans:2},
-  {cat:'🔬 Ilm-fan',q:"Suvning kimyoviy formulasi?",opts:["CO2","H2O","O2","NaCl"],ans:1},
-  {cat:'🔬 Ilm-fan',q:"Yorug'lik tezligi taxminan?",opts:["100,000 km/s","200,000 km/s","300,000 km/s","400,000 km/s"],ans:2},
-  {cat:'🔬 Ilm-fan',q:"DNA qanday shaklga ega?",opts:["Spiral","Ikki spiral","To'g'ri chiziq","Halqa"],ans:1},
-  {cat:'🔬 Ilm-fan',q:"Davriy jadvalda nechta element?",opts:["108","112","118","120"],ans:2},
-  {cat:'🔬 Ilm-fan',q:"Yer Quyosh atrofida qancha vaqtda aylanadi?",opts:["24 soat","30 kun","365 kun","100 yil"],ans:2},
-  {cat:'🔢 Matematika',q:"√144 = ?",opts:["10","11","12","13"],ans:2},
-  {cat:'🔢 Matematika',q:"7 × 8 = ?",opts:["54","56","58","60"],ans:1},
-  {cat:'🔢 Matematika',q:"2^10 = ?",opts:["512","1000","1024","2048"],ans:2},
-  {cat:'🔢 Matematika',q:"Uchburchak ichki burchaklari yig'indisi?",opts:["90°","180°","270°","360°"],ans:1},
-  {cat:'📜 Tarix',q:"Amir Temur qachon tug'ilgan?",opts:["1320","1336","1350","1370"],ans:1},
-  {cat:'📜 Tarix',q:"Birinchi jahon urushi qachon boshlangan?",opts:["1912","1913","1914","1915"],ans:2},
-  {cat:'📜 Tarix',q:"O'zbekiston mustaqilligini qachon e'lon qildi?",opts:["1989","1990","1991","1992"],ans:2},
-  {cat:'💻 Texnologiya',q:"HTML nima uchun ishlatiladi?",opts:["Dizayn","Dasturlash","Veb sahifa tuzilishi","Ma'lumotlar bazasi"],ans:2},
-  {cat:'💻 Texnologiya',q:"CPU nima?",opts:["Grafika kartasi","Markaziy protsessor","Xotira qurilmasi","Tarmoq kartasi"],ans:1},
-  {cat:'💻 Texnologiya',q:"WWW nima degani?",opts:["World Wide Web","Wide World Web","World Web Wide","Web World Wide"],ans:0},
-  {cat:'💻 Texnologiya',q:"1 GB = ? MB",opts:["100 MB","512 MB","1000 MB","1024 MB"],ans:3},
-  {cat:'⚽ Sport',q:"Futbol jamosida nechta o'yinchi?",opts:["9","10","11","12"],ans:2},
-  {cat:'⚽ Sport',q:"Olimpiada o'yinlari necha yilda bir marta?",opts:["2","3","4","5"],ans:2},
-  {cat:'🎵 Musiqa',q:"Pianinoda nechta tugma bor?",opts:["72","76","88","96"],ans:2},
-  {cat:'🎵 Musiqa',q:"Gitarada nechta tor bor?",opts:["4","5","6","7"],ans:2},
-  {cat:'🌿 Tabiat',q:"Qaysi hayvon eng tez yuguradi?",opts:["Sher","Gepard","Ot","Kenguru"],ans:1},
-  {cat:'🌿 Tabiat',q:"Eng katta hayvon?",opts:["Fil","Ko'k kit","Zubr","Karkidon"],ans:1},
-  {cat:'🌿 Tabiat',q:"Baliqlar nafas olish uchun nima ishlatadi?",opts:["O'pka","Jabralar","Teri","Burun"],ans:1},
-  {cat:'🎯 Umumiy',q:"1 yilda nechta kun bor (oddiy yil)?",opts:["364","365","366","367"],ans:1},
-  {cat:'🎯 Umumiy',q:"Telefon ixtiro qilgan kim?",opts:["Thomas Edison","Nikola Tesla","Alexander Bell","Guglielmo Marconi"],ans:2},
-  {cat:'🎯 Umumiy',q:"Quyosh tizimida nechta sayyora?",opts:["7","8","9","10"],ans:1},
-  {cat:'🎯 Umumiy',q:"Kamalakda nechta rang?",opts:["5","6","7","8"],ans:2},
-  {cat:'🎯 Umumiy',q:"Insonning odatdagi tana harorati?",opts:["35°C","36°C","37°C","38°C"],ans:2},
-  {cat:'🎯 Umumiy',q:"Eng ko'p gapiriluvchi til?",opts:["Ingliz","Ispan","Xitoy (mandarin)","Arab"],ans:2},
-  {cat:'🎯 Umumiy',q:"Qaysi vitamin quyosh nuridan hosil bo'ladi?",opts:["A","B12","C","D"],ans:3},
-  {cat:'🎯 Umumiy',q:"Shakespeare qaysi mamlakatdan?",opts:["Fransiya","Germaniya","Angliya","Italiya"],ans:2},
-  {cat:'🔬 Ilm-fan',q:"Eng yengil element?",opts:["Geliy","Litiy","Vodorod","Berilliy"],ans:2},
-  {cat:'🔢 Matematika',q:"0.5 kasr — oddiy kasr sifatida?",opts:["1/3","1/4","1/2","2/3"],ans:2},
-  {cat:'🔢 Matematika',q:"Doira yuzi formulasi?",opts:["2πr","πr²","πd","2πr²"],ans:1},
-  {cat:'🌍 Geografiya',q:"Buyuk Ipak yo'li qayerdan qayerga?",opts:["Xitoydan Yevropaga","Hindistondan Afrikaga","Rossiyadan Avstriyaga","Arabistondan Xitoyga"],ans:0},
-  {cat:'💻 Texnologiya',q:"Python qanday til?",opts:["Kompilyatsiya qilinuvchi","Interpretatsiya qilinuvchi","Assembler","Mashina tili"],ans:1},
-  {cat:'⚽ Sport',q:"Tennis kortida yakka o'yinda nechta o'yinchi?",opts:["1","2","3","4"],ans:1},
-  {cat:'🌿 Tabiat',q:"Fotosintez qaysi qismida sodir bo'ladi?",opts:["Ildiz","Poya","Barg","Gul"],ans:2},
-  {cat:'🎯 Umumiy',q:"1 daqiqada necha sekund?",opts:["30","60","90","120"],ans:1},
-  {cat:'🔬 Ilm-fan',q:"Atom yadrosi nimadan iborat?",opts:["Elektron va proton","Proton va neytron","Neytron va elektron","Faqat proton"],ans:1},
-  {cat:'📜 Tarix',q:"Buyuk Ipak yo'li qachon faol bo'lgan?",opts:["100 BCE — 1400 CE","1000 BCE — 500 CE","500 CE — 1800 CE","200 CE — 900 CE"],ans:0},
-  {cat:'💻 Texnologiya',q:"Birinchi kompyuter virusi qachon yaratilgan?",opts:["1971","1981","1991","2001"],ans:0},
-  {cat:'🎯 Umumiy',q:"Dunyoda nechta mamlakat bor?",opts:["185","193","201","210"],ans:1},
+  {cat:'рџЊЌ Geografiya',q:"O'zbekistonning poytaxti?",opts:["Samarqand","Toshkent","Buxoro","Namangan"],ans:1},
+  {cat:'рџЊЌ Geografiya',q:"Dunyo bo'yicha eng baland tog'?",opts:["K2","Kangchenjunga","Everest","Lhotse"],ans:2},
+  {cat:'рџЊЌ Geografiya',q:"Eng katta okean?",opts:["Atlantika","Hind","Tinch","Arktika"],ans:2},
+  {cat:'рџЊЌ Geografiya',q:"Braziliyaning poytaxti?",opts:["Rio de Janeiro","San-Paulo","Braziliya","Salvador"],ans:2},
+  {cat:'рџЊЌ Geografiya',q:"Dunyodagi eng katta davlat?",opts:["Kanada","Xitoy","AQSh","Rossiya"],ans:3},
+  {cat:'рџЊЌ Geografiya',q:"Nil daryosi qaysi qit'ada?",opts:["Osiyo","Afrika","Amerika","Yevropa"],ans:1},
+  {cat:'рџЊЌ Geografiya',q:"Yaponiyaning poytaxti?",opts:["Osaka","Kyoto","Tokyo","Hiroshima"],ans:2},
+  {cat:'рџ”¬ Ilm-fan',q:"Suvning kimyoviy formulasi?",opts:["CO2","H2O","O2","NaCl"],ans:1},
+  {cat:'рџ”¬ Ilm-fan',q:"Yorug'lik tezligi taxminan?",opts:["100,000 km/s","200,000 km/s","300,000 km/s","400,000 km/s"],ans:2},
+  {cat:'рџ”¬ Ilm-fan',q:"DNA qanday shaklga ega?",opts:["Spiral","Ikki spiral","To'g'ri chiziq","Halqa"],ans:1},
+  {cat:'рџ”¬ Ilm-fan',q:"Davriy jadvalda nechta element?",opts:["108","112","118","120"],ans:2},
+  {cat:'рџ”¬ Ilm-fan',q:"Yer Quyosh atrofida qancha vaqtda aylanadi?",opts:["24 soat","30 kun","365 kun","100 yil"],ans:2},
+  {cat:'рџ”ў Matematika',q:"в€љ144 = ?",opts:["10","11","12","13"],ans:2},
+  {cat:'рџ”ў Matematika',q:"7 Г— 8 = ?",opts:["54","56","58","60"],ans:1},
+  {cat:'рџ”ў Matematika',q:"2^10 = ?",opts:["512","1000","1024","2048"],ans:2},
+  {cat:'рџ”ў Matematika',q:"Uchburchak ichki burchaklari yig'indisi?",opts:["90В°","180В°","270В°","360В°"],ans:1},
+  {cat:'рџ“њ Tarix',q:"Amir Temur qachon tug'ilgan?",opts:["1320","1336","1350","1370"],ans:1},
+  {cat:'рџ“њ Tarix',q:"Birinchi jahon urushi qachon boshlangan?",opts:["1912","1913","1914","1915"],ans:2},
+  {cat:'рџ“њ Tarix',q:"O'zbekiston mustaqilligini qachon e'lon qildi?",opts:["1989","1990","1991","1992"],ans:2},
+  {cat:'рџ’» Texnologiya',q:"HTML nima uchun ishlatiladi?",opts:["Dizayn","Dasturlash","Veb sahifa tuzilishi","Ma'lumotlar bazasi"],ans:2},
+  {cat:'рџ’» Texnologiya',q:"CPU nima?",opts:["Grafika kartasi","Markaziy protsessor","Xotira qurilmasi","Tarmoq kartasi"],ans:1},
+  {cat:'рџ’» Texnologiya',q:"WWW nima degani?",opts:["World Wide Web","Wide World Web","World Web Wide","Web World Wide"],ans:0},
+  {cat:'рџ’» Texnologiya',q:"1 GB = ? MB",opts:["100 MB","512 MB","1000 MB","1024 MB"],ans:3},
+  {cat:'вљЅ Sport',q:"Futbol jamosida nechta o'yinchi?",opts:["9","10","11","12"],ans:2},
+  {cat:'вљЅ Sport',q:"Olimpiada o'yinlari necha yilda bir marta?",opts:["2","3","4","5"],ans:2},
+  {cat:'рџЋµ Musiqa',q:"Pianinoda nechta tugma bor?",opts:["72","76","88","96"],ans:2},
+  {cat:'рџЋµ Musiqa',q:"Gitarada nechta tor bor?",opts:["4","5","6","7"],ans:2},
+  {cat:'рџЊї Tabiat',q:"Qaysi hayvon eng tez yuguradi?",opts:["Sher","Gepard","Ot","Kenguru"],ans:1},
+  {cat:'рџЊї Tabiat',q:"Eng katta hayvon?",opts:["Fil","Ko'k kit","Zubr","Karkidon"],ans:1},
+  {cat:'рџЊї Tabiat',q:"Baliqlar nafas olish uchun nima ishlatadi?",opts:["O'pka","Jabralar","Teri","Burun"],ans:1},
+  {cat:'рџЋЇ Umumiy',q:"1 yilda nechta kun bor (oddiy yil)?",opts:["364","365","366","367"],ans:1},
+  {cat:'рџЋЇ Umumiy',q:"Telefon ixtiro qilgan kim?",opts:["Thomas Edison","Nikola Tesla","Alexander Bell","Guglielmo Marconi"],ans:2},
+  {cat:'рџЋЇ Umumiy',q:"Quyosh tizimida nechta sayyora?",opts:["7","8","9","10"],ans:1},
+  {cat:'рџЋЇ Umumiy',q:"Kamalakda nechta rang?",opts:["5","6","7","8"],ans:2},
+  {cat:'рџЋЇ Umumiy',q:"Insonning odatdagi tana harorati?",opts:["35В°C","36В°C","37В°C","38В°C"],ans:2},
+  {cat:'рџЋЇ Umumiy',q:"Eng ko'p gapiriluvchi til?",opts:["Ingliz","Ispan","Xitoy (mandarin)","Arab"],ans:2},
+  {cat:'рџЋЇ Umumiy',q:"Qaysi vitamin quyosh nuridan hosil bo'ladi?",opts:["A","B12","C","D"],ans:3},
+  {cat:'рџЋЇ Umumiy',q:"Shakespeare qaysi mamlakatdan?",opts:["Fransiya","Germaniya","Angliya","Italiya"],ans:2},
+  {cat:'рџ”¬ Ilm-fan',q:"Eng yengil element?",opts:["Geliy","Litiy","Vodorod","Berilliy"],ans:2},
+  {cat:'рџ”ў Matematika',q:"0.5 kasr вЂ” oddiy kasr sifatida?",opts:["1/3","1/4","1/2","2/3"],ans:2},
+  {cat:'рџ”ў Matematika',q:"Doira yuzi formulasi?",opts:["2ПЂr","ПЂrВІ","ПЂd","2ПЂrВІ"],ans:1},
+  {cat:'рџЊЌ Geografiya',q:"Buyuk Ipak yo'li qayerdan qayerga?",opts:["Xitoydan Yevropaga","Hindistondan Afrikaga","Rossiyadan Avstriyaga","Arabistondan Xitoyga"],ans:0},
+  {cat:'рџ’» Texnologiya',q:"Python qanday til?",opts:["Kompilyatsiya qilinuvchi","Interpretatsiya qilinuvchi","Assembler","Mashina tili"],ans:1},
+  {cat:'вљЅ Sport',q:"Tennis kortida yakka o'yinda nechta o'yinchi?",opts:["1","2","3","4"],ans:1},
+  {cat:'рџЊї Tabiat',q:"Fotosintez qaysi qismida sodir bo'ladi?",opts:["Ildiz","Poya","Barg","Gul"],ans:2},
+  {cat:'рџЋЇ Umumiy',q:"1 daqiqada necha sekund?",opts:["30","60","90","120"],ans:1},
+  {cat:'рџ”¬ Ilm-fan',q:"Atom yadrosi nimadan iborat?",opts:["Elektron va proton","Proton va neytron","Neytron va elektron","Faqat proton"],ans:1},
+  {cat:'рџ“њ Tarix',q:"Buyuk Ipak yo'li qachon faol bo'lgan?",opts:["100 BCE вЂ” 1400 CE","1000 BCE вЂ” 500 CE","500 CE вЂ” 1800 CE","200 CE вЂ” 900 CE"],ans:0},
+  {cat:'рџ’» Texnologiya',q:"Birinchi kompyuter virusi qachon yaratilgan?",opts:["1971","1981","1991","2001"],ans:0},
+  {cat:'рџЋЇ Umumiy',q:"Dunyoda nechta mamlakat bor?",opts:["185","193","201","210"],ans:1},
 ];
 
-// ── SESSION ──
+// в”Ђв”Ђ SESSION в”Ђв”Ђ
 const session  = JSON.parse(localStorage.getItem('gz_session')||'{}');
 const myKey    = localStorage.getItem('gz_current_user')||'';
 const p1Key    = session.player1 || myKey;
@@ -249,7 +249,7 @@ const amIP1    = myKey===p1Key;
 
 const usersObj = getUsers();
 const p1User   = usersObj[p1Key]||{username:p1Key||'O\'yinchi 1',skinColor:'#10b981'};
-const p2User   = isSolo ? {username:'CPU 🤖',skinColor:'#f43f5e'} : (usersObj[p2Key]||{username:p2Key,skinColor:'#f43f5e'});
+const p2User   = isSolo ? {username:'CPU рџ¤–',skinColor:'#f43f5e'} : (usersObj[p2Key]||{username:p2Key,skinColor:'#f43f5e'});
 
 const TOTAL_Q=10, TIME=15;
 let questions, qIndex, scores, activeTurn, timerInt, timeLeft, myAnswered, oppAnswered, _roomUnsub;
@@ -284,12 +284,12 @@ async function initMultiplayer(){
     document.getElementById('wait-code').textContent=roomCode;
     _roomUnsub = hostRoom('quiz', roomCode, myKey, () => {
       document.getElementById('wait-overlay').style.display='none';
-      showToast('🎮 Raqib ulandi!');
+      showToast('рџЋ® Raqib ulandi!');
     });
   } else {
     document.getElementById('wait-overlay').style.display='none';
     _roomUnsub = guestJoinRoom('quiz', roomCode, myKey, () => {
-      showToast('🎮 O\'yin boshlandi!');
+      showToast('рџЋ® O\'yin boshlandi!');
     });
   }
 
@@ -379,7 +379,7 @@ function answer(idx){
   // In solo: only current player's turn
   if(isSolo){
     const myTurn=amIP1?0:1;
-    if(activeTurn!==myTurn){showToast('⏳ Sizning navbatingiz emas!','error');return;}
+    if(activeTurn!==myTurn){showToast('вЏі Sizning navbatingiz emas!','error');return;}
   }
   myAnswered=idx;
   clearInterval(timerInt);
@@ -396,15 +396,15 @@ function answer(idx){
   btns[q.ans].classList.add('correct');
   if(!correct) btns[idx].classList.add('wrong');
   document.getElementById('feedback').style.color=correct?'#34d399':'#f87171';
-  document.getElementById('feedback').textContent=correct?`✅ To'g'ri! +${pts} ball`:'❌ Noto\'g\'ri!';
+  document.getElementById('feedback').textContent=correct?`вњ… To'g'ri! +${pts} ball`:'вќЊ Noto\'g\'ri!';
 
   if(!isSolo){
     const myRole=amIP1?'p1':'p2';
-    pushGameState('quiz', roomCode, {
+    sendState('quiz', roomCode, {
       qIndex, [`${myRole}Answered`]:idx, [`${myRole}Score`]:scores[myIdx]
     });
     if(oppAnswered!==null) advanceAfterBoth();
-    else document.getElementById('opp-status').textContent='⏳ Raqib javob bermoqda...';
+    else document.getElementById('opp-status').textContent='вЏі Raqib javob bermoqda...';
   } else {
     // Solo: CPU answers shortly after
     if(activeTurn===0){
@@ -435,7 +435,7 @@ function showOppFeedback(idx){
   if(btns[idx]) btns[idx].classList.add('opponent-answered');
   const oppName=amIP1?p2User.username:p1User.username;
   document.getElementById('opp-status').textContent=
-    idx===q.ans?`✅ ${oppName} to'g'ri javob berdi!`:`❌ ${oppName} noto'g'ri javob berdi`;
+    idx===q.ans?`вњ… ${oppName} to'g'ri javob berdi!`:`вќЊ ${oppName} noto'g'ri javob berdi`;
 }
 
 function advanceSolo(){
@@ -452,7 +452,7 @@ function advanceAfterBoth(){
   setTimeout(()=>{
     qIndex++;
     myAnswered=null; oppAnswered=null;
-    if(!isSolo&&amIP1) pushGameState('quiz', roomCode, {qIndex});
+    if(!isSolo&&amIP1) sendState('quiz', roomCode, {qIndex});
     showQuestion();
   },1600);
 }
@@ -462,12 +462,12 @@ function timeUp(){
   document.querySelectorAll('.ans-btn').forEach(b=>b.classList.add('locked'));
   document.querySelectorAll('.ans-btn')[questions[qIndex].ans].classList.add('correct');
   document.getElementById('feedback').style.color='#f87171';
-  document.getElementById('feedback').textContent='⏰ Vaqt tugadi!';
+  document.getElementById('feedback').textContent='вЏ° Vaqt tugadi!';
   if(!isSolo){
     const myRole=amIP1?'p1':'p2';
-    pushGameState('quiz', roomCode, {qIndex,[`${myRole}Answered`]:-1});
+    sendState('quiz', roomCode, {qIndex,[`${myRole}Answered`]:-1});
     if(oppAnswered!==null) advanceAfterBoth();
-    else document.getElementById('opp-status').textContent='⏳ Raqib javob bermoqda...';
+    else document.getElementById('opp-status').textContent='вЏі Raqib javob bermoqda...';
   } else {
     setTimeout(()=>cpuAnswer(Math.floor(Math.random()*4)),600);
   }
@@ -492,20 +492,20 @@ function endGame(){
   document.getElementById('rs-s2').textContent=s2;
 
   if(s1===s2){
-    emoji='🤝';title='Durang!';sub='Ikki o\'yinchi teng ball to\'pladi!';
+    emoji='рџ¤ќ';title='Durang!';sub='Ikki o\'yinchi teng ball to\'pladi!';
     if(!isSolo)finishRoom('quiz',roomCode,'draw');
   } else {
     const winner=s1>s2?0:1;
     const iWon=(winner===0&&amIP1)||(winner===1&&!amIP1)||(isSolo&&winner===0);
     const winName=winner===0?p1User.username:p2User.username;
     if(iWon||(isSolo&&winner===0)){
-      emoji='🏆';title='G\'OLIBSIZ!';sub=`${winName} yutdi: ${s1} vs ${s2}`;
-      coinsText=`+🪙 ${reward} tanga!`;
+      emoji='рџЏ†';title='G\'OLIBSIZ!';sub=`${winName} yutdi: ${s1} vs ${s2}`;
+      coinsText=`+рџЄ™ ${reward} tanga!`;
       addCoins(reward);addResult(true);
       document.getElementById('nav-coins').textContent=getCurrentUser()?.coins||0;
       if(!isSolo)finishRoom('quiz',roomCode,winner===0?p1Key:p2Key);
     } else {
-      emoji='😢';title='Yutqazdingiz';sub=`${winName} yutdi: ${Math.max(s1,s2)} vs ${Math.min(s1,s2)}`;
+      emoji='рџў';title='Yutqazdingiz';sub=`${winName} yutdi: ${Math.max(s1,s2)} vs ${Math.min(s1,s2)}`;
       addResult(false);
       if(!isSolo)finishRoom('quiz',roomCode,winner===0?p1Key:p2Key);
     }
