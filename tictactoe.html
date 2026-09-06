@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GameZone - Tic-Tac-Toe</title>
+  <!-- Ably SDK -->
+  <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0a0a1a;color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(10,10,26,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .back-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;transition:.2s;}
+    .back-btn:hover{background:rgba(255,255,255,.12);}
+    .coin-display{display:flex;align-items:center;gap:6px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);border-radius:20px;padding:6px 14px;font-size:15px;font-weight:700;color:#fbbf24;}
+
+    .game-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;}
+    .game-title{font-family:'Orbitron',sans-serif;font-size:26px;font-weight:900;background:linear-gradient(135deg,#fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;text-align:center;}
+
+    /* Connection badge */
+    .conn-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;margin-bottom:16px;}
+    .conn-badge.online{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3);}
+    .conn-badge.offline{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+    .conn-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.2s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    .players-bar{display:flex;align-items:center;gap:16px;margin-bottom:28px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px 24px;}
+    .player-info{display:flex;align-items:center;gap:10px;flex:1;}
+    .player-info.right{flex-direction:row-reverse;text-align:right;}
+    .p-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;transition:.3s;}
+    .p-name{font-size:16px;font-weight:700;}
+    .p-symbol{font-size:22px;}
+    .vs-badge{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,.3);padding:6px 12px;background:rgba(255,255,255,.05);border-radius:8px;}
+    .active-player .p-avatar{box-shadow:0 0 0 3px #6366f1,0 0 20px rgba(99,102,241,.4);}
+    .active-player .p-name{color:#a78bfa;}
+
+    .status-bar{font-size:18px;font-weight:700;text-align:center;min-height:28px;margin-bottom:16px;color:rgba(255,255,255,.7);}
+
+    .board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+    .cell{width:clamp(90px,22vw,120px);height:clamp(90px,22vw,120px);background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.08);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:clamp(36px,10vw,56px);cursor:pointer;transition:.25s;user-select:none;}
+    .cell:hover:not(.taken){background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.4);transform:scale(1.04);}
+    .cell.x{color:#6366f1;text-shadow:0 0 20px rgba(99,102,241,.6);}
+    .cell.o{color:#f43f5e;text-shadow:0 0 20px rgba(244,63,94,.6);}
+    .cell.win{animation:pulse .6s ease infinite alternate;}
+    @keyframes pulse{from{transform:scale(1)}to{transform:scale(1.06)}}
+    .cell.taken{cursor:not-allowed;}
+
+    .controls{display:flex;gap:12px;}
+    .ctrl-btn{padding:12px 28px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.3s;letter-spacing:1px;}
+    .btn-play{background:linear-gradient(135deg,#6366f1,#8b5cf6);}
+    .btn-play:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(99,102,241,.4);}
+    .btn-back{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+    .btn-back:hover{background:rgba(255,255,255,.12);}
+
+    /* Waiting for opponent overlay */
+    .wait-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:150;}
+    .wait-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:48px 40px;text-align:center;max-width:340px;width:90%;}
+    .spinner{width:56px;height:56px;margin:0 auto 20px;border:4px solid rgba(255,255,255,.1);border-top-color:#6366f1;border-radius:50%;animation:spin 1s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .wait-title{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;}
+    .wait-sub{color:rgba(255,255,255,.4);font-size:14px;margin-bottom:24px;}
+    .wait-code{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;color:#fbbf24;letter-spacing:4px;margin-bottom:20px;}
+    .cancel-btn{padding:11px 28px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);border-radius:12px;color:#f87171;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;}
+    .cancel-btn:hover{background:rgba(239,68,68,.35);}
+
+    /* Result */
+    .result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:200;}
+    .result-overlay.show{display:flex;}
+    .result-box{background:#13132a;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:48px 40px;text-align:center;max-width:360px;width:90%;animation:bounceIn .4s ease;}
+    @keyframes bounceIn{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    .result-emoji{font-size:72px;display:block;margin-bottom:16px;}
+    .result-title{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;margin-bottom:8px;}
+    .result-sub{color:rgba(255,255,255,.5);font-size:15px;margin-bottom:8px;}
+    .result-coins{color:#fbbf24;font-size:18px;font-weight:700;margin-bottom:28px;}
+    .result-btns{display:flex;gap:12px;justify-content:center;}
+    .res-btn{padding:12px 24px;border:none;border-radius:12px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.3s;}
+    .res-play{background:linear-gradient(135deg,#6366f1,#8b5cf6);}
+    .res-play:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(99,102,241,.4);}
+    .res-home{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+    .res-home:hover{background:rgba(255,255,255,.12);}
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="back-btn" onclick="goHome()">← Orqaga</button>
+  <div class="nav-logo">⭕ Tic-Tac-Toe</div>
+  <div class="coin-display">🪙 <span id="nav-coins">0</span></div>
+</nav>
+
+<div class="game-wrap">
+  <h1 class="game-title">Tic-Tac-Toe</h1>
+  <div class="conn-badge online" id="conn-badge"><span class="conn-dot"></span><span id="conn-text">Ulangan</span></div>
+
+  <div class="players-bar">
+    <div class="player-info" id="p1-info">
+      <div class="p-avatar" id="p1-avatar">?</div>
+      <div><div class="p-name" id="p1-name">O'yinchi 1</div><div class="p-symbol">✕</div></div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="player-info right" id="p2-info">
+      <div class="p-avatar" id="p2-avatar">?</div>
+      <div><div class="p-name" id="p2-name">O'yinchi 2</div><div class="p-symbol">○</div></div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status">Yuklanmoqda...</div>
+
+  <div class="board" id="board">
+    <div class="cell" onclick="makeMove(0)"></div><div class="cell" onclick="makeMove(1)"></div><div class="cell" onclick="makeMove(2)"></div>
+    <div class="cell" onclick="makeMove(3)"></div><div class="cell" onclick="makeMove(4)"></div><div class="cell" onclick="makeMove(5)"></div>
+    <div class="cell" onclick="makeMove(6)"></div><div class="cell" onclick="makeMove(7)"></div><div class="cell" onclick="makeMove(8)"></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn btn-play" onclick="resetGame()">🔄 Qayta O'yna</button>
+    <button class="ctrl-btn btn-back" onclick="goHome()">🏠 Bosh Sahifa</button>
+  </div>
+</div>
+
+<!-- Waiting overlay (shown when waiting for opponent) -->
+<div class="wait-overlay" id="wait-overlay" style="display:none">
+  <div class="wait-box">
+    <div class="spinner"></div>
+    <div class="wait-title">Raqib kutilmoqda...</div>
+    <div class="wait-sub">Xona kodi:</div>
+    <div class="wait-code" id="wait-code">—</div>
+    <div class="wait-sub" style="margin-bottom:20px">Raqibingizga shu kodni yuboring</div>
+    <button class="cancel-btn" onclick="goHome()">✕ Bekor qilish</button>
+  </div>
+</div>
+
+<!-- Result -->
+<div class="result-overlay" id="result-overlay">
+  <div class="result-box">
+    <span class="result-emoji" id="res-emoji">🏆</span>
+    <div class="result-title" id="res-title"></div>
+    <div class="result-sub"   id="res-sub"></div>
+    <div class="result-coins" id="res-coins"></div>
+    <div class="result-btns">
+      <button class="res-btn res-play" onclick="resetGame()">🔄 Qayta</button>
+      <button class="res-btn res-home" onclick="goHome()">🏠 Uy</button>
+    </div>
+  </div>
+</div>
+
+<script src="firebase.js"></script>
+<script src="coins.js"></script>
+<script>
+// ── SESSION ──
+const session  = JSON.parse(localStorage.getItem('gz_session') || '{}');
+const myKey    = localStorage.getItem('gz_current_user') || '';
+const p1Key    = session.player1 || myKey;
+const p2Key    = session.player2 || 'cpu';
+const roomCode = session.roomCode || '';
+const reward   = session.reward   || 50;
+const isSolo   = !session.player2 || session.player2 === 'cpu';
+const amIP1    = myKey === p1Key;
+
+const usersObj = getUsers();
+const p1User   = usersObj[p1Key] || { username: p1Key || 'O\'yinchi 1', skinColor: '#6366f1' };
+const p2User   = isSolo
+  ? { username: 'CPU 🤖', skinColor: '#f43f5e' }
+  : (usersObj[p2Key] || { username: p2Key, skinColor: '#f43f5e' });
+
+// ── STATE ──
+let board       = Array(9).fill('');
+let currentTurn = 'X';
+let gameOver    = false;
+let _roomUnsub  = null;
+const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('nav-coins').textContent = getCurrentUser()?.coins || 0;
+  setupPlayers();
+  if (isSolo) {
+    hideWait();
+    updateStatus();
+  } else {
+    initMultiplayer();
+  }
+});
+
+function setupPlayers() {
+  document.getElementById('p1-name').textContent   = p1User.username;
+  document.getElementById('p1-avatar').textContent = p1User.username.charAt(0).toUpperCase();
+  document.getElementById('p1-avatar').style.background = p1User.skinColor || '#6366f1';
+  document.getElementById('p2-name').textContent   = p2User.username;
+  document.getElementById('p2-avatar').textContent = p2User.username.charAt(0).toUpperCase();
+  document.getElementById('p2-avatar').style.background = p2User.skinColor || '#f43f5e';
+  highlightActive();
+}
+
+// ── MULTIPLAYER INIT ──
+function initMultiplayer() {
+  if (!roomCode) { showError('Xona topilmadi'); return; }
+  const ably = getAbly();
+  if (!ably) { showError('Ably ulanmadi!'); return; }
+
+  if (amIP1) {
+    // HOST: xona ochadi
+    document.getElementById('wait-overlay').style.display = 'flex';
+    document.getElementById('wait-code').textContent = roomCode;
+
+    _roomUnsub = hostRoom('tictactoe', roomCode, myKey, (guestKey) => {
+      hideWait();
+      updateStatus();
+      showToast(`🎮 Raqib ulandi!`);
+    });
+  } else {
+    // GUEST: xonaga kiradi
+    hideWait();
+    updateStatus();
+    _roomUnsub = guestJoinRoom('tictactoe', roomCode, myKey, (p1, p2) => {
+      showToast(`🎮 O'yin boshlandi!`);
+    });
+  }
+
+  // O'yin holatini tinglash
+  const statUnsub = listenGameState('tictactoe', roomCode, (data) => {
+    if (data.gameOver) return;
+    syncFromAbly(data);
+  });
+
+  const origUnsub = _roomUnsub;
+  _roomUnsub = () => { origUnsub && origUnsub(); statUnsub && statUnsub(); };
+  setConnBadge(true);
+}
+
+function hideWait() {
+  document.getElementById('wait-overlay').style.display = 'none';
+}
+
+function setConnBadge(online) {
+  const badge = document.getElementById('conn-badge');
+  const text  = document.getElementById('conn-text');
+  badge.className = `conn-badge ${online ? 'online' : 'offline'}`;
+  text.textContent = online ? 'Ulangan' : 'Ulanmagan';
+}
+
+// ── MAKE MOVE ──
+function makeMove(idx) {
+  if (gameOver || board[idx]) return;
+
+  // Turn check
+  if (!isSolo) {
+    if (amIP1  && currentTurn !== 'X') { showToast('⏳ Raqib navbati!', 'error'); return; }
+    if (!amIP1 && currentTurn !== 'O') { showToast('⏳ Raqib navbati!', 'error'); return; }
+    // Check opponent has joined
+    const db = getDB();
+    if (!db) return;
+  }
+
+  placeSymbol(idx, currentTurn);
+
+  const winner = checkWinner();
+  if (winner) { endGame(winner); return; }
+  if (board.every(c => c)) { endGame('draw'); return; }
+
+  currentTurn = currentTurn === 'X' ? 'O' : 'X';
+  highlightActive();
+  updateStatus();
+
+  if (!isSolo) pushToAbly();
+  if (isSolo && currentTurn === 'O') setTimeout(cpuMove, 500);
+}
+
+function placeSymbol(idx, sym) {
+  board[idx] = sym;
+  const cell = document.querySelectorAll('.cell')[idx];
+  cell.textContent = sym === 'X' ? '✕' : '○';
+  cell.classList.add(sym.toLowerCase(), 'taken');
+}
+
+// ── ABLY PUSH/PULL ──
+function pushToAbly() {
+  pushGameState('tictactoe', roomCode, { board, currentTurn, ts: Date.now() });
+}
+
+function syncFromAbly(state) {
+  if (!state || gameOver) return;
+  const myTurn = amIP1 ? 'X' : 'O';
+  if (state.currentTurn === myTurn) {
+    board = state.board;
+    currentTurn = state.currentTurn;
+    renderBoard();
+    highlightActive();
+    updateStatus();
+    const winner = checkWinner();
+    if (winner) endGame(winner);
+    else if (board.every(c => c)) endGame('draw');
+  }
+}
+
+function renderBoard() {
+  document.querySelectorAll('.cell').forEach((cell, i) => {
+    cell.textContent = '';
+    cell.className = 'cell';
+    if (board[i]) {
+      cell.textContent = board[i] === 'X' ? '✕' : '○';
+      cell.classList.add(board[i].toLowerCase(), 'taken');
+    }
+  });
+}
+
+// ── CPU ──
+function cpuMove() {
+  const move = findBest('O') ?? findBest('X') ?? (board[4] === '' ? 4 : null) ?? randomEmpty();
+  if (move !== null) makeMove(move);
+}
+function findBest(sym) {
+  for (const [a,b,c] of WINS) {
+    const line = [board[a], board[b], board[c]];
+    if (line.filter(v => v === sym).length === 2 && line.includes(''))
+      return [a,b,c][line.indexOf('')];
+  }
+  return null;
+}
+function randomEmpty() {
+  const e = board.map((v,i) => v ? null : i).filter(v => v !== null);
+  return e.length ? e[Math.floor(Math.random() * e.length)] : null;
+}
+
+// ── WIN CHECK ──
+function checkWinner() {
+  for (const [a,b,c] of WINS) {
+    if (board[a] && board[a] === board[b] && board[b] === board[c]) {
+      [a,b,c].forEach(i => document.querySelectorAll('.cell')[i].classList.add('win'));
+      return board[a];
+    }
+  }
+  return null;
+}
+
+// ── STATUS ──
+function highlightActive() {
+  document.getElementById('p1-info').classList.toggle('active-player', currentTurn === 'X');
+  document.getElementById('p2-info').classList.toggle('active-player', currentTurn === 'O');
+}
+function updateStatus() {
+  const name = currentTurn === 'X' ? p1User.username : p2User.username;
+  document.getElementById('status').textContent = `${name} navbati (${currentTurn === 'X' ? '✕' : '○'})`;
+}
+
+// ── END GAME ──
+function endGame(result) {
+  gameOver = true;
+  if (_roomUnsub) _roomUnsub();
+  document.querySelectorAll('.cell').forEach(c => c.classList.add('taken'));
+
+  let emoji, title, sub, coinsText = '';
+
+  if (result === 'draw') {
+    emoji = '🤝'; title = 'Durang!'; sub = 'Ikki o\'yinchi teng!';
+    if (!isSolo) finishRoom('tictactoe', roomCode, 'draw');
+  } else {
+    const winnerSym = result;
+    const iWon = (winnerSym === 'X' && amIP1) || (winnerSym === 'O' && !amIP1) || (isSolo && winnerSym === 'X');
+    const loserSym = winnerSym === 'X' ? 'O' : 'X';
+
+    if (iWon) {
+      emoji = '🏆'; title = 'G\'OLIBSIZ!';
+      sub = `Tabriklaymiz, ${getCurrentUser()?.username}!`;
+      coinsText = `+🪙 ${reward} tanga oldi!`;
+      addCoins(reward); addResult(true);
+      document.getElementById('nav-coins').textContent = getCurrentUser()?.coins || 0;
+      if (!isSolo) finishRoom('tictactoe', roomCode, winnerSym === 'X' ? p1Key : p2Key);
+    } else if (isSolo && winnerSym === 'O') {
+      emoji = '😢'; title = 'Yutqazdingiz'; sub = 'CPU yutdi! Yana urinib ko\'ring.';
+      addResult(false);
+    } else {
+      emoji = '😢'; title = 'Yutqazdingiz'; sub = 'Raqib yutdi. Keyingi safar omad!';
+      addResult(false);
+      if (!isSolo) finishRoom('tictactoe', roomCode, winnerSym === 'X' ? p1Key : p2Key);
+    }
+  }
+
+  setTimeout(() => {
+    document.getElementById('res-emoji').textContent  = emoji;
+    document.getElementById('res-title').textContent  = title;
+    document.getElementById('res-sub').textContent    = sub;
+    document.getElementById('res-coins').textContent  = coinsText;
+    document.getElementById('result-overlay').classList.add('show');
+    refreshCoinDisplay();
+  }, 600);
+}
+
+// ── RESET ──
+async function resetGame() {
+  board = Array(9).fill('');
+  currentTurn = 'X';
+  gameOver = false;
+  document.getElementById('result-overlay').classList.remove('show');
+  renderBoard();
+  updateStatus();
+  highlightActive();
+  if (!isSolo) {
+    pushToAbly();
+    getAbly()?.channels.get(`gz-room-tictactoe-${roomCode}`).publish('room-ready', { status: 'playing' });
+  }
+}
+
+function showError(msg) {
+  document.getElementById('status').textContent = '❌ ' + msg;
+  setConnBadge(false);
+}
+
+function goHome() {
+  if (_roomUnsub) _roomUnsub();
+  window.location.href = 'dashboard.html';
+}
+</script>
+</body>
+</html>
